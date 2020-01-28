@@ -1,5 +1,7 @@
 #include "CLI11.hh"
+#include "dnsd.hh"
 #include <iostream>
+#include <thread>
 
 int main(int argc, char **argv) {
   // Declare a new CLI app for help/usage context generation
@@ -15,9 +17,10 @@ int main(int argc, char **argv) {
   // Parse input arguments
   CLI11_PARSE(app, argc, argv);
 
-  for (auto &iter : entries) {
-    std::cout << "Entry: " << iter << std::endl;
-  }
-
+  // Start Daemon (inits resolver and starts server)
+  DNS::Daemon daemon(entries);
+  auto serve = [&]() { daemon.run(); };
+  auto serveThread = std::thread(serve);
+  serveThread.join();
   return 0;
-}
+} // main()
