@@ -1,7 +1,7 @@
 .PHONY: dnsd
 .DEFAULT_GOAL := dnsd
 
-COMPILER_CXX = clang++
+COMPILER_CXX = c++
 CXX_FLAGS = -std=c++17 -O2 -g
 LD_FLAGS = -lpthread
 
