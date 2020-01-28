@@ -3,12 +3,13 @@
 
 COMPILER_CXX = clang++
 CXX_FLAGS = -std=c++17 -O2 -g
+LD_FLAGS = -lpthread
 
 dnsd:
-	$(COMPILER_CXX) $(CXX_FLAGS) main.cc dnsd.cc -o dnsd
+	$(COMPILER_CXX) $(CXX_FLAGS) main.cc dnsd.cc -o dnsd $(LD_FLAGS)
 
 check:
-	$(COMPILER_CXX) $(CXX_FLAGS) test.cc dnsd.cc -o test
+	$(COMPILER_CXX) $(CXX_FLAGS) test.cc dnsd.cc -o test $(LD_FLAGS)
 	./test -s
 
 clean:
