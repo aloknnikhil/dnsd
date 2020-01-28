@@ -42,6 +42,11 @@ DNS::Daemon::Daemon(std::vector<std::string> records) {
       }
       throw std::runtime_error(message.str());
     }
+
+    if (m_cache.find(aRecord) != m_cache.end()) {
+      std::cerr << "WARN: Duplicate A Record - IP mapping for " << aRecord
+                << std::endl;
+    }
     m_cache[aRecord] = inetIP;
   }
 }
