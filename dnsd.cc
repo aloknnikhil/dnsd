@@ -9,6 +9,11 @@
 #include <utility>
 
 DNS::Daemon::Daemon(std::vector<std::string> records) {
+  if (records.size() == 0) {
+    std::stringstream message;
+    message << "Cannot initialize daemon with empty record list";
+    throw std::runtime_error(message.str());
+  }
   for (const auto &record : records) {
     std::stringstream iss(record);
     std::string aRecord;
@@ -16,7 +21,7 @@ DNS::Daemon::Daemon(std::vector<std::string> records) {
     std::getline(iss, aRecord, '/');
     if (aRecord.empty()) {
       std::stringstream message;
-      message << "Invalid entry: " << record << std::endl;
+      message << "Invalid entry: " << record;
       throw std::runtime_error(message.str());
     }
 
@@ -25,7 +30,7 @@ DNS::Daemon::Daemon(std::vector<std::string> records) {
     std::getline(iss, ip, '/');
     if (ip.empty()) {
       std::stringstream message;
-      message << "Invalid entry: " << record << std::endl;
+      message << "Invalid entry: " << record;
       throw std::runtime_error(message.str());
     }
     // Validate IP address
@@ -34,11 +39,10 @@ DNS::Daemon::Daemon(std::vector<std::string> records) {
     if (ret <= 0) {
       std::stringstream message;
       if (ret == 0) {
-        message << "Address: " << ip << " - Not in Presentation Format"
-                << std::endl;
+        message << "Address: " << ip << " - Not in Presentation Format";
       } else {
         message << "What: " << std::strerror(errno) << " Context: inet_pton("
-                << ip << ")" << std::endl;
+                << ip << ")";
       }
       throw std::runtime_error(message.str());
     }
@@ -64,8 +68,7 @@ void DNS::Daemon::run() {
   auto sockFD = socket(AF_INET, SOCK_DGRAM, 0);
   if (sockFD == -1) {
     std::stringstream message;
-    message << "What: " << std::strerror(errno) << "Context: socket(UDP)"
-            << std::endl;
+    message << "What: " << std::strerror(errno) << "Context: socket(UDP)";
     throw std::runtime_error(message.str());
   }
 
