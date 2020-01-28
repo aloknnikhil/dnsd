@@ -10,3 +10,6 @@ dnsd:
 check:
 	$(COMPILER_CXX) $(CXX_FLAGS) test.cc dnsd.cc -o test
 	./test -s
+
+clean:
+	rm -f ./test ./dnsd
