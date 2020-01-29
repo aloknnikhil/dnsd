@@ -4,6 +4,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <arpa/inet.h>
 
 DNS::Message::Header::Header(const char *data, int len) {
   if (len < DNS::Default::HDR_SIZE) {

@@ -2,7 +2,7 @@
 .DEFAULT_GOAL := dnsd
 
 COMPILER_CXX = c++
-CXX_FLAGS = -std=c++17 -O2 -g
+CXX_FLAGS = -std=c++14 -O2 -g
 LD_FLAGS = -lpthread
 
 dnsd:
