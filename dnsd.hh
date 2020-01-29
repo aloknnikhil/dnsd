@@ -14,7 +14,7 @@ class Daemon {
 public:
   // Accepts a list of records (formatted as A Record/IP address) and returns an
   // instance of a daemon
-  Daemon(std::vector<std::string> records);
+  Daemon(std::string spoof);
 
   // Blocking call to run the daemon and bind to port 53 (DNS Spec)
   void run();
@@ -26,7 +26,7 @@ public:
   ~Daemon();
 
 private:
-  std::unordered_map<std::string, struct in_addr *> m_cache;
+  std::string m_spoofIP;
   bool m_complete = false;
 }; // class Daemon
 } // namespace DNS

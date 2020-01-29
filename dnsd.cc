@@ -8,59 +8,26 @@
 #include <sys/socket.h>
 #include <utility>
 
-DNS::Daemon::Daemon(std::vector<std::string> records) {
-  if (records.size() == 0) {
+DNS::Daemon::Daemon(std::string spoof) {
+
+  // Validate IP address
+  auto inetIP = new struct in_addr();
+  auto ret = inet_pton(AF_INET, spoof.c_str(), inetIP);
+  if (ret <= 0) {
     std::stringstream message;
-    message << "Cannot initialize daemon with empty record list";
+    if (ret == 0) {
+      message << "Address: " << spoof << " - Not in Presentation Format";
+    } else {
+      message << "What: " << std::strerror(errno) << " Context: inet_pton("
+              << spoof << ")";
+    }
     throw std::runtime_error(message.str());
   }
-  for (const auto &record : records) {
-    std::stringstream iss(record);
-    std::string aRecord;
-    // Parse A record
-    std::getline(iss, aRecord, '/');
-    if (aRecord.empty()) {
-      std::stringstream message;
-      message << "Invalid entry: " << record;
-      throw std::runtime_error(message.str());
-    }
-
-    // Parse IP address
-    std::string ip;
-    std::getline(iss, ip, '/');
-    if (ip.empty()) {
-      std::stringstream message;
-      message << "Invalid entry: " << record;
-      throw std::runtime_error(message.str());
-    }
-    // Validate IP address
-    auto inetIP = new struct in_addr();
-    auto ret = inet_pton(AF_INET, ip.c_str(), inetIP);
-    if (ret <= 0) {
-      std::stringstream message;
-      if (ret == 0) {
-        message << "Address: " << ip << " - Not in Presentation Format";
-      } else {
-        message << "What: " << std::strerror(errno) << " Context: inet_pton("
-                << ip << ")";
-      }
-      throw std::runtime_error(message.str());
-    }
-
-    if (m_cache.find(aRecord) != m_cache.end()) {
-      std::cerr << "WARN: Duplicate A Record - IP mapping for " << aRecord
-                << std::endl;
-    }
-    m_cache[aRecord] = inetIP;
-  }
+  m_spoofIP = spoof;
 }
 
 DNS::Daemon::~Daemon() {
   // Do nothing for now
-  for (const auto &iter : m_cache) {
-    std::cout << "Entry: " << iter.first << " = " << inet_ntoa(*iter.second)
-              << std::endl;
-  }
 }
 
 void DNS::Daemon::run() {
