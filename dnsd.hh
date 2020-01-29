@@ -7,7 +7,11 @@
 namespace DNS {
 namespace Default {
 static const uint16_t PORT = 53;
-static const uint32_t ADDRESS = 0;
+static const uint32_t ADDRESS = INADDR_ANY;
+static const uint32_t BACKLOG = 5;
+// c.f. https://www.ietf.org/rfc/rfc1035 -
+// Max UDP Payload size for classic DNS for IPv4
+static const uint16_t BUFFER_SIZE = 512;
 } // namespace Default
 
 class Daemon {

@@ -1,4 +1,5 @@
 #include "dnsd.hh"
+#include "message.hh"
 #include <cstring>
 #include <iostream>
 #include <netinet/in.h>
@@ -18,7 +19,7 @@ DNS::Daemon::Daemon(std::string spoof) {
     if (ret == 0) {
       message << "Address: " << spoof << " - Not in Presentation Format";
     } else {
-      message << "What: " << std::strerror(errno) << " Context: inet_pton("
+      message << "What: " << std::strerror(errno) << " - Context: inet_pton("
               << spoof << ")";
     }
     throw std::runtime_error(message.str());
@@ -35,9 +36,39 @@ void DNS::Daemon::run() {
   auto sockFD = socket(AF_INET, SOCK_DGRAM, 0);
   if (sockFD == -1) {
     std::stringstream message;
-    message << "What: " << std::strerror(errno) << "Context: socket(UDP)";
+    message << "What: " << std::strerror(errno) << " - Context: socket(UDP)";
     throw std::runtime_error(message.str());
   }
 
   // Bind to UDP port (default: 53; address: 0.0.0.0)
+  const sockaddr_in addr{.sin_len = 0,
+                         .sin_family = AF_INET,
+                         .sin_port = htons(DNS::Default::PORT),
+                         .sin_addr.s_addr = htonl(DNS::Default::ADDRESS),
+                         .sin_zero = 0};
+  if (bind(sockFD, reinterpret_cast<const sockaddr *>(&addr), sizeof(addr)) <
+      0) {
+    std::stringstream message;
+    message << "What: " << std::strerror(errno) << " - Context: bind()";
+    throw std::runtime_error(message.str());
+  }
+
+  char buf[DNS::Default::BUFFER_SIZE];
+  sockaddr_in clientAddr{};
+  socklen_t clientLen = sizeof(clientAddr);
+  while (!m_complete) {
+    int n = recvfrom(sockFD, buf, DNS::Default::BUFFER_SIZE, 0,
+                     reinterpret_cast<sockaddr *>(&clientAddr), &clientLen);
+    if (n < 0) {
+      std::stringstream message;
+      message << "What: " << std::strerror(errno) << " - Context: listen()";
+      throw std::runtime_error(message.str());
+    }
+
+    DNS::Message::Header hdr(buf, n);
+    std::stringstream print;
+    print << hdr;
+    std::cout << "Received message: " << print.str()
+              << "\nFrom: " << inet_ntoa(clientAddr.sin_addr) << std::endl;
+  }
 }
