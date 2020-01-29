@@ -54,7 +54,7 @@ void DNS::Daemon::run() {
     throw std::runtime_error(message.str());
   }
 
-  char buf[DNS::Default::BUFFER_SIZE];
+  unsigned char buf[DNS::Default::BUFFER_SIZE];
   sockaddr_in clientAddr{};
   socklen_t clientLen = sizeof(clientAddr);
   while (!m_complete) {
@@ -66,9 +66,9 @@ void DNS::Daemon::run() {
       throw std::runtime_error(message.str());
     }
 
-    DNS::Message::Header hdr(buf, n);
+    auto hdr = DNS::Parse(buf);
     std::stringstream print;
-    print << hdr;
+    print << *hdr;
     std::cout << "Received message: " << print.str()
               << "\nFrom: " << inet_ntoa(clientAddr.sin_addr) << std::endl;
   }

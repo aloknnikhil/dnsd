@@ -1,59 +1,25 @@
 #include "message.hh"
+#include <arpa/inet.h>
 #include <bitset>
+#include <iomanip>
+#include <ios>
+#include <iostream>
 #include <ostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <arpa/inet.h>
-
-DNS::Message::Header::Header(const char *data, int len) {
-  if (len < DNS::Default::HDR_SIZE) {
-    std::stringstream message;
-    message << "Incomplete message. Size is < " << Default::HDR_SIZE
-            << " bytes";
-    throw std::runtime_error(message.str());
-  }
-
-  m_id = (static_cast<unsigned char>(data[0]) << 8) +
-         static_cast<unsigned char>(data[1]);
-  data += 2;
-
-  int octets = (static_cast<unsigned char>(data[0]) << 8) +
-               static_cast<unsigned char>(data[1]);
-  data += 2;
-  std::bitset<16> bitfields(octets);
-  m_qr = bitfields[0];
-  m_opcode = (bitfields[1] << 3) + (bitfields[2] << 2) + (bitfields[3] << 1) +
-             bitfields[4];
-  m_aa = bitfields[5];
-  m_tc = bitfields[6];
-  m_rd = bitfields[7];
-  m_ra = bitfields[8];
-  m_z = (bitfields[9] << 2) + (bitfields[10] << 1) + bitfields[11];
-  m_rcode = (bitfields[12] << 3) + (bitfields[13] << 2) + (bitfields[14] << 1) +
-            bitfields[15];
-
-  m_qdcount = (static_cast<unsigned char>(data[0]) << 8) +
-              static_cast<unsigned char>(data[1]);
-  data += 2;
-
-  m_ancount = (static_cast<unsigned char>(data[0]) << 8) +
-              static_cast<unsigned char>(data[1]);
-  data += 2;
-
-  m_nscount = (static_cast<unsigned char>(data[0]) << 8) +
-              static_cast<unsigned char>(data[1]);
-  data += 2;
-
-  m_arcount = (static_cast<unsigned char>(data[0]) << 8) +
-              static_cast<unsigned char>(data[1]);
-  data += 2;
-}
 
 namespace DNS {
 std::stringstream &operator<<(std::stringstream &ss,
                               const DNS::Message::Header &hdr) {
-  ss << "ID: " << hdr.m_id << " QDCOUNT: " << hdr.m_qdcount;
+  ss << "\nID: " << ntohs(hdr.m_id) << "\nQR: " << hdr.m_qr
+     << " OPCODE: " << hdr.m_opcode << " AA: " << hdr.m_aa
+     << " TC: " << hdr.m_tc << " RD: " << hdr.m_rd << " RA: " << hdr.m_ra
+     << " Z: " << hdr.m_z << " AD: " << hdr.m_ad << " CD: " << hdr.m_cd
+     << " RCODE: " << hdr.m_rcode << "\nQDCOUNT: " << ntohs(hdr.m_qdcount)
+     << " ANCOUNT: " << ntohs(hdr.m_ancount)
+     << " NSCOUNT: " << ntohs(hdr.m_nscount)
+     << " ARCOUNT: " << ntohs(hdr.m_arcount);
   return ss;
 }
 
@@ -65,6 +31,8 @@ std::ostream &operator<<(std::ostream &os, const DNS::Message::Header &hdr) {
   octets += hdr.m_rd << 8;
   octets += hdr.m_ra << 7;
   octets += hdr.m_z << 6;
+  octets += hdr.m_ad << 5;
+  octets += hdr.m_cd << 4;
   octets += hdr.m_rcode;
   os << htons(hdr.m_id) << htons(octets) << htons(hdr.m_qdcount)
      << htons(hdr.m_ancount) << htons(hdr.m_nscount) << htons(hdr.m_arcount);

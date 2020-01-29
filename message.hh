@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <ostream>
 #include <sstream>
 
@@ -8,35 +9,43 @@ static const int HDR_SIZE = 12;
 } // namespace Default
 class Message {
 public:
-  class Header {
+  struct Header {
   public:
-    unsigned int m_id : 16;
-    unsigned int m_qr : 1;
-    unsigned int m_opcode : 4;
-    unsigned int m_aa : 1;
-    unsigned int m_tc : 1;
-    unsigned int m_rd : 1;
-    unsigned int m_ra : 1;
-    unsigned int m_z : 3;
-    unsigned int m_rcode : 4;
-    unsigned int m_qdcount : 16;
-    unsigned int m_ancount : 16;
-    unsigned int m_nscount : 16;
-    unsigned int m_arcount : 16;
-    Header(const char *data, int len);
-    std::string String();
-
-  private:
-    friend std::stringstream &operator<<(std::stringstream &ss,
-                                         const DNS::Message::Header &hdr);
-    friend std::ostream &operator<<(std::ostream &os,
-                                    const DNS::Message::Header &hdr);
+    uint16_t m_id;
+#if (BYTE_ORDER == BIG_ENDIAN)
+    uint16_t m_qr : 1;
+    uint16_t m_opcode : 4;
+    uint16_t m_aa : 1;
+    uint16_t m_tc : 1;
+    uint16_t m_rd : 1;
+    uint16_t m_ra : 1;
+    uint16_t m_z : 1;
+    uint16_t m_ad : 1;
+    uint16_t m_cd : 1;
+    uint16_t m_rcode : 4;
+#elif (BYTE_ORDER == LITTLE_ENDIAN)
+    uint16_t m_rd : 1;
+    uint16_t m_tc : 1;
+    uint16_t m_aa : 1;
+    uint16_t m_opcode : 4;
+    uint16_t m_qr : 1;
+    uint16_t m_rcode : 4;
+    uint16_t m_cd : 1;
+    uint16_t m_ad : 1;
+    uint16_t m_z : 1;
+    uint16_t m_ra : 1;
+#endif
+    uint16_t m_qdcount;
+    uint16_t m_ancount;
+    uint16_t m_nscount;
+    uint16_t m_arcount;
   };
-  class Question {
+  struct Question {
   public:
     char m_qname[Default::MAX_DOMAIN_NAME_SIZE];
     unsigned int m_qtype : 16;
     unsigned int m_qclass : 16;
+    Question(const char *data);
   };
   class ResourceRecord {
   public:
@@ -49,4 +58,11 @@ public:
   };
   Message(const char *data, int len);
 };
+
+static const Message::Header *Parse(const unsigned char *data) {
+  return reinterpret_cast<const DNS::Message::Header *>(data);
+}
+std::stringstream &operator<<(std::stringstream &ss,
+                              const DNS::Message::Header &hdr);
+std::ostream &operator<<(std::ostream &os, const DNS::Message::Header &hdr);
 } // namespace DNS
