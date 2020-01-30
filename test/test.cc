@@ -5,8 +5,8 @@
 #include <string>
 #define CATCH_CONFIG_MAIN
 
-#include "catch.hh"
-#include "client.h"
+#include <catch.hh>
+#include <client.hh>
 #include <iostream>
 #include <pthread.h>
 #include <stdexcept>

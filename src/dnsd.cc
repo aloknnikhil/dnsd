@@ -1,5 +1,5 @@
-#include "dnsd.hh"
-#include "message.hh"
+#include <dnsd.hh>
+#include <message.hh>
 #include <arpa/inet.h>
 #include <cstring>
 #include <exception>

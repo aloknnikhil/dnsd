@@ -6,11 +6,11 @@ CXX_FLAGS = -std=c++14 -O2 -g
 LD_FLAGS = -lpthread
 
 dnsd:
-	$(COMPILER_CXX) $(CXX_FLAGS) main.cc dnsd.cc message.cc debug.cc -o dnsd $(LD_FLAGS)
+	$(COMPILER_CXX) $(CXX_FLAGS) -I./include src/main.cc src/dnsd.cc src/message.cc src/debug.cc -o dnsd $(LD_FLAGS)
 
 check:
-	$(COMPILER_CXX) -std=c++14 -O0 -g test.cc dnsd.cc message.cc debug.cc -o test $(LD_FLAGS)
-	./test -s
+	$(COMPILER_CXX) -std=c++14 -O0 -g -I./include test/test.cc src/dnsd.cc src/message.cc src/debug.cc -o unittest $(LD_FLAGS)
+	./unittest -s
 
 clean:
-	rm -f ./test ./dnsd
+	rm -f ./unittest ./dnsd
