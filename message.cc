@@ -1,7 +1,10 @@
 #include "message.hh"
+#include <arpa/inet.h>
 #include <iostream>
 #include <ostream>
 #include <sstream>
+#include <stdexcept>
+#include <sys/socket.h>
 
 // Parses a DNS message from the buffer and the given length
 // Note: This daemon minimally parses only the question & answer sections and
@@ -113,10 +116,17 @@ DNS::Message::ResourceRecord::ResourceRecord(unsigned char *data,
       char c = *buffer++;
       label.append(1, c);
     }
+
+    // Add a byte for the length octet for every label
+    m_size += 1;
+
     length = *buffer++;
     // Each label is stored as an element in a vector
     m_name.push_back(label);
   }
+  // Add a byte for the final 0-length octet
+  m_size += 1;
+
   m_type = *reinterpret_cast<uint16_t *>(buffer);
   buffer += 2;
   m_size += 2;
@@ -133,7 +143,8 @@ DNS::Message::ResourceRecord::ResourceRecord(unsigned char *data,
   buffer += 2;
   m_size += 2;
 
-  m_rdata = reinterpret_cast<char *>(buffer);
+  m_rdata = reinterpret_cast<unsigned char *>(buffer);
+
   buffer += ntohs(m_rdLength);
   m_size += ntohs(m_rdLength);
 }
@@ -211,9 +222,30 @@ std::ostream &operator<<(std::ostream &os, const DNS::Message::Question &q) {
   // +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
   // Serialized in network order (big-endian)
 
+  int qnameSize = 0;
   for (const auto &iter : q.m_qname) {
+    if (iter.size() == 0) {
+      std::stringstream message;
+      message << "Label: " << iter << " is empty";
+      throw std::runtime_error(message.str());
+    }
+    if (iter.size() > Default::MAX_LABEL_LENGTH) {
+      std::stringstream message;
+      message << "Label: " << iter
+              << " exceeds max label length (63 octets): " << iter.size();
+      throw std::runtime_error(message.str());
+    }
     os << static_cast<uint8_t>(iter.size()) << iter;
+    // Extra size count for length octet
+    qnameSize += iter.size() + 1;
+    // 254 = 255 (maximum) - 1 (0-length octet)
+    if (qnameSize > Default::MAX_DOMAIN_NAME_SIZE - 1) {
+      std::stringstream message;
+      message << "QNAME exceeds max length (255 octets): " << qnameSize;
+      throw std::runtime_error(message.str());
+    }
   }
+
   // Add 0-length octet to mark end of NAME
   os << static_cast<uint8_t>(0);
   os.write(reinterpret_cast<const char *>(&q.m_qtype), 2);

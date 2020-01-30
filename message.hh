@@ -1,13 +1,15 @@
 #include <arpa/inet.h>
 #include <ostream>
 #include <sstream>
+#include <stdexcept>
 #include <vector>
 
 namespace DNS {
 namespace Default {
 // Defined by RFC1035
+static const int MAX_LABEL_LENGTH = 63;
 static const int MAX_DOMAIN_NAME_SIZE = 255;
-static const uint16_t HDR_SIZE = 12;
+static const int HDR_SIZE = 12;
 } // namespace Default
 
 // The Message describes a classic DNS message according to RFC1035
@@ -52,7 +54,11 @@ public:
 
   class Question {
   public:
+    // Construct an empty question
+    // NOTE: Using the default constructor requires explicitly updating m_size
     Question() : m_qtype(0), m_qclass(0), m_size(0) {}
+
+    // Builds a question by parsing the buffer at the given offset
     Question(unsigned char *buf, uint16_t offset);
     uint16_t Size() { return m_size; }
     std::vector<std::string> m_qname;
@@ -63,9 +69,13 @@ public:
 
   class ResourceRecord {
   public:
+    // Construct an empty resource record
+    // NOTE: Using the default constructor requires explicitly updating m_size
     ResourceRecord()
         : m_type(0), m_class(0), m_ttl(0), m_rdLength(0), m_rdata(nullptr),
           m_size(0) {}
+
+    // Builds a resource record by parsing the buffer at the given offset
     ResourceRecord(unsigned char *buf, uint16_t offset);
     uint16_t Size() { return m_size; }
     std::vector<std::string> m_name;
@@ -73,7 +83,7 @@ public:
     uint16_t m_class;
     uint32_t m_ttl;
     uint16_t m_rdLength;
-    char *m_rdata;
+    unsigned char *m_rdata;
     uint16_t m_size;
   };
 

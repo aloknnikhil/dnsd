@@ -1,5 +1,8 @@
 #include "message.hh"
 #include <arpa/inet.h>
+#include <cstring>
+#include <ios>
+#include <iostream>
 #include <sstream>
 
 namespace DNS {
@@ -61,6 +64,7 @@ std::stringstream &operator<<(std::stringstream &ss,
       ss << ".";
     }
   }
+
   ss << " TYPE: " << ntohs(rr.m_type) << " CLASS: " << ntohs(rr.m_class)
      << " TTL: " << ntohl(rr.m_ttl) << " RDLENGTH: " << ntohs(rr.m_rdLength)
      << " SIZE: " << rr.m_size << std::endl;

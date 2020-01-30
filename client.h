@@ -3,6 +3,7 @@
 #include "message.hh"
 #include <cstdlib>
 #include <ctime>
+#include <iostream>
 #include <netinet/in.h>
 #include <ostream>
 #include <sstream>
@@ -27,6 +28,7 @@ DNS::Message *query(struct sockaddr_in server,
   q.m_qclass = htons(qtype);
   q.m_qtype = htons(qclass);
   q.m_qname = domainLabels;
+  // TODO: The question m_size is not updated here
   query.m_questions.push_back(q);
 
   std::ostringstream queryBuf;
@@ -41,25 +43,46 @@ DNS::Message *query(struct sockaddr_in server,
     throw std::runtime_error(message.str());
   }
 
-  socklen_t serverLen = sizeof(server);
-  int n = sendto(sockFD, queryBuf.str().c_str(), queryBuf.tellp(), 0,
-                 reinterpret_cast<sockaddr *>(&server), serverLen);
-  if (n < queryBuf.tellp()) {
+  // Set socket receive timeout
+  struct timeval tv;
+  tv.tv_sec = 1;
+  tv.tv_usec = 0;
+  if (setsockopt(sockFD, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
     std::stringstream message;
     message << "[CLIENT] What: " << std::strerror(errno)
-            << " - Context: sendto()";
-    throw std::runtime_error(message.str());
-  }
-  unsigned char buf[DNS::Default::BUFFER_SIZE];
-  n = recvfrom(sockFD, buf, DNS::Default::BUFFER_SIZE, 0,
-               reinterpret_cast<sockaddr *>(&server), &serverLen);
-  if (n < 0) {
-    std::stringstream message;
-    message << "[CLIENT] What: " << std::strerror(errno)
-            << " - Context: recvfrom()";
+            << " - Context: setsockopt(SO_RCVTIMEO)";
     throw std::runtime_error(message.str());
   }
 
-  return new DNS::Message(buf, n);
+  socklen_t serverLen = sizeof(server);
+  bool done = false;
+  int n = 0;
+  auto buf = new unsigned char[DNS::Default::BUFFER_SIZE];
+  while (!done) {
+    n = sendto(sockFD, queryBuf.str().c_str(), queryBuf.tellp(), 0,
+               reinterpret_cast<sockaddr *>(&server), serverLen);
+    if (n < queryBuf.tellp()) {
+      std::stringstream message;
+      message << "[CLIENT] What: " << std::strerror(errno)
+              << " - Context: sendto()";
+      throw std::runtime_error(message.str());
+    }
+    n = recvfrom(sockFD, buf, DNS::Default::BUFFER_SIZE, 0,
+                 reinterpret_cast<sockaddr *>(&server), &serverLen);
+
+    if (n < 0) {
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        continue;
+      }
+      std::stringstream message;
+      message << "[CLIENT] What: " << std::strerror(errno)
+              << " - Context: recvfrom()";
+      throw std::runtime_error(message.str());
+    }
+    done = true;
+  }
+
+  auto msg = new DNS::Message(buf, n);
+  return msg;
 }
 } // namespace DNS

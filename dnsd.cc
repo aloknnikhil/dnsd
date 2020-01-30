@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <string>
 #include <sys/socket.h>
+#include <unistd.h>
 #include <utility>
 
 // Constructs a spoofing daemon that spoofs A-record DNS lookup requests with
@@ -117,9 +118,8 @@ void DNS::Daemon::run(bool block) {
         // Set RD length to 4 bytes (binary container for IPv4)
         rr.m_rdLength = htons(4);
         // Set RD data to the spoofed IPv4
-        rr.m_rdata = reinterpret_cast<char *>(&m_spoofIP.s_addr);
-        // Non-RFC field for calculating data offset
-        rr.m_size = reply.m_questions[i].m_size + 4 + 2 + ntohs(rr.m_rdLength);
+        rr.m_rdata = reinterpret_cast<unsigned char *>(&m_spoofIP.s_addr);
+        // TODO: The resource m_size is not updated here
         reply.m_answers.push_back(rr);
       }
 
@@ -142,5 +142,12 @@ void DNS::Daemon::run(bool block) {
       std::cerr << "Failed to parse DNS request: " << e.what()
                 << " Ignoring request" << std::endl;
     }
+  }
+
+  // Close socket
+  if (close(sockFD) < 0) {
+    std::stringstream message;
+    message << "What: " << std::strerror(errno) << " - Context: close()";
+    throw std::runtime_error(message.str());
   }
 }
