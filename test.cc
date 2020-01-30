@@ -76,6 +76,14 @@ TEST_CASE("DNS daemon should NOT be initialized with an invalid IPv4 address") {
         Catch::Matchers::Message(
             "Address: 🕺.🎒.👂🏼.🐼 - Not in Presentation Format"));
   }
+
+  SECTION("Negative IPv4 octets") {
+    std::string address("-1.-4.-44.22");
+    REQUIRE_THROWS_MATCHES(
+        DNS::Daemon(address), std::runtime_error,
+        Catch::Matchers::Message(
+            "Address: -1.-4.-44.22 - Not in Presentation Format"));
+  }
 }
 
 void *daemonRunner(void *arg) {
