@@ -7,8 +7,8 @@
 #include "catch.hh"
 #include "client.h"
 #include <iostream>
+#include <pthread.h>
 #include <stdexcept>
-#include <thread>
 #include <vector>
 
 TEST_CASE("DNS daemon should be initialized with a valid IPv4 address") {
@@ -77,12 +77,19 @@ TEST_CASE("DNS daemon should NOT be initialized with an invalid IPv4 address") {
   }
 }
 
+void *daemonRunner(void *arg) {
+  DNS::Daemon *daemon = reinterpret_cast<DNS::Daemon *>(arg);
+  daemon->run(false);
+  return nullptr;
+}
+
 TEST_CASE("DNS daemon responds to a simple lookup request") {
   std::string address("9.9.9.9");
   DNS::Daemon daemon(address);
 
-  auto serve = [&]() { daemon.run(false); };
-  auto serveThread = std::thread(serve);
+  // Using pthreads over std::thread due to incompatibility with Catch2
+  pthread_t thread_id;
+  pthread_create(&thread_id, nullptr, daemonRunner, &daemon);
 
   // Send a DNS query
   std::vector<std::string> domainLabels;
@@ -98,6 +105,7 @@ TEST_CASE("DNS daemon responds to a simple lookup request") {
 
   auto reply = DNS::query(srvAddr.sin_addr, domainLabels, 1, 1);
   daemon.stop();
+  pthread_join(thread_id, nullptr);
 
   std::stringstream debug;
   debug << reply;
