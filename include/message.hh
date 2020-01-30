@@ -59,7 +59,7 @@ public:
     Question() : m_qtype(0), m_qclass(0), m_size(0) {}
 
     // Builds a question by parsing the buffer at the given offset
-    Question(unsigned char *buf, uint16_t offset);
+    Question(unsigned char *buf, uint16_t offset, uint16_t msgLength);
     uint16_t Size() { return m_size; }
     std::vector<std::string> m_qname;
     uint16_t m_qtype;
@@ -76,7 +76,7 @@ public:
           m_size(0) {}
 
     // Builds a resource record by parsing the buffer at the given offset
-    ResourceRecord(unsigned char *buf, uint16_t offset);
+    ResourceRecord(unsigned char *buf, uint16_t offset, uint16_t msgLength);
     uint16_t Size() { return m_size; }
     std::vector<std::string> m_name;
     uint16_t m_type;

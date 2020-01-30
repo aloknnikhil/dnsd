@@ -1,6 +1,6 @@
-#include <message.hh>
 #include <arpa/inet.h>
 #include <iostream>
+#include <message.hh>
 #include <ostream>
 #include <sstream>
 #include <stdexcept>
@@ -22,7 +22,7 @@ DNS::Message::Message(unsigned char *data, int len) {
   // Parse questions
   uint16_t offset = DNS::Default::HDR_SIZE;
   for (int i = 0; i < ntohs(m_hdr.m_qdcount); i++) {
-    Question q(data, offset);
+    Question q(data, offset, len);
     m_questions.push_back(q);
     offset += q.Size();
     if (offset >= len && i < (ntohs(m_hdr.m_qdcount) - 1)) {
@@ -43,7 +43,7 @@ DNS::Message::Message(unsigned char *data, int len) {
 
   // Parse answers
   for (int i = 0; i < ntohs(m_hdr.m_ancount); i++) {
-    ResourceRecord rr(data, offset);
+    ResourceRecord rr(data, offset, len);
     m_answers.push_back(rr);
     offset += rr.Size();
     if (offset >= len && i < (ntohs(m_hdr.m_ancount) - 1)) {
@@ -59,17 +59,31 @@ DNS::Message::Message(unsigned char *data, int len) {
 // Since the question section is a variable field, this constructor reads from
 // the buffer and follows the algorithm described in RFC1035 to parse domain
 // labels and question type/class.
-DNS::Message::Question::Question(unsigned char *data, uint16_t offset) {
+DNS::Message::Question::Question(unsigned char *data, uint16_t offset,
+                                 uint16_t msgLength) {
   m_size = 0;
   // Label length
   // Start parsing from the offset
   auto buffer = data + offset;
+  if (offset >= msgLength) {
+    std::stringstream message;
+    message << "Offset: " << offset
+            << " out of bounds. Message length: " << msgLength;
+    throw std::runtime_error(message.str());
+  }
   // Every domain label length precedes the data
   int length = *buffer++;
 
   // End of the QNAME field is marked by a 0-length octet
   while (length != 0) {
+    // Verify offset is within bounds
     m_size += length;
+    if ((m_size + offset) >= msgLength) {
+      std::stringstream message;
+      message << "Offset: " << (m_size + offset)
+              << " out of bounds. Message length: " << msgLength;
+      throw std::runtime_error(message.str());
+    }
     std::string label;
     for (int i = 0; i < length; i++) {
       char c = *buffer++;
@@ -86,6 +100,13 @@ DNS::Message::Question::Question(unsigned char *data, uint16_t offset) {
   // Add a byte for the final 0-length octet
   m_size += 1;
 
+  // Check for the last 4 bytes (2 for QTYPE + 2 for QCLASS)
+  if ((m_size + offset + 2 + 2) > msgLength) {
+    std::stringstream message;
+    message << "Offset: " << (m_size + offset + 2 + 2)
+            << " out of bounds. Message length: " << msgLength;
+    throw std::runtime_error(message.str());
+  }
   m_qtype = *reinterpret_cast<uint16_t *>(buffer);
   buffer += 2;
   m_size += 2;
@@ -100,17 +121,31 @@ DNS::Message::Question::Question(unsigned char *data, uint16_t offset) {
 // constructor reads from the buffer and follows the algorithm described in
 // RFC1035 to parse domain labels and the other fields.
 DNS::Message::ResourceRecord::ResourceRecord(unsigned char *data,
-                                             uint16_t offset) {
+                                             uint16_t offset,
+                                             uint16_t msgLength) {
   m_size = 0;
   // Label length
   // Start parsing from the offset
   auto buffer = data + offset;
+  if (offset >= msgLength) {
+    std::stringstream message;
+    message << "Offset: " << offset
+            << " out of bounds. Message length: " << msgLength;
+    throw std::runtime_error(message.str());
+  }
   // Every domain label length precedes the data
   int length = *buffer++;
 
   // End of the NAME field is marked by a 0-length octet
   while (length != 0) {
+    // Verify offset is within bounds
     m_size += length;
+    if ((m_size + offset) >= msgLength) {
+      std::stringstream message;
+      message << "Offset: " << (m_size + offset)
+              << " out of bounds. Message length: " << msgLength;
+      throw std::runtime_error(message.str());
+    }
     std::string label;
     for (int i = 0; i < length; i++) {
       char c = *buffer++;
@@ -127,6 +162,14 @@ DNS::Message::ResourceRecord::ResourceRecord(unsigned char *data,
   // Add a byte for the final 0-length octet
   m_size += 1;
 
+  // Check for the TYPE, CLASS, TTL, RDLENGTH bytes
+  if ((m_size + offset + 2 + 2 + 4 + 2) > msgLength) {
+    std::stringstream message;
+    message << "Offset: " << (m_size + offset + 2 + 2 + 4 + 2)
+            << " out of bounds. Message length: " << msgLength;
+    throw std::runtime_error(message.str());
+  }
+
   m_type = *reinterpret_cast<uint16_t *>(buffer);
   buffer += 2;
   m_size += 2;
@@ -142,6 +185,14 @@ DNS::Message::ResourceRecord::ResourceRecord(unsigned char *data,
   m_rdLength = *reinterpret_cast<uint16_t *>(buffer);
   buffer += 2;
   m_size += 2;
+
+  // Check for the RDATA bytes
+  if ((m_size + offset + ntohs(m_rdLength)) > msgLength) {
+    std::stringstream message;
+    message << "Offset: " << (m_size + offset + ntohs(m_rdLength))
+            << " out of bounds. Message length: " << msgLength;
+    throw std::runtime_error(message.str());
+  }
 
   m_rdata = reinterpret_cast<unsigned char *>(buffer);
 
