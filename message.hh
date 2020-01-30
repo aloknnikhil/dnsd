@@ -1,12 +1,21 @@
-#include <cstdint>
+#include <arpa/inet.h>
 #include <ostream>
 #include <sstream>
+#include <vector>
 
 namespace DNS {
 namespace Default {
+// Defined by RFC1035
 static const int MAX_DOMAIN_NAME_SIZE = 255;
-static const int HDR_SIZE = 12;
+static const uint16_t HDR_SIZE = 12;
 } // namespace Default
+
+// The Message describes a classic DNS message according to RFC1035
+// The Message minimally contains
+// - a header field laid out in the big endian order
+// - a vector of Questions (The Question Section)
+// - a vector of Answers (The Answer Section)
+// Note: The message serialization does NOT support message compression
 class Message {
 public:
   struct Header {
@@ -40,29 +49,57 @@ public:
     uint16_t m_nscount;
     uint16_t m_arcount;
   };
-  struct Question {
+
+  class Question {
   public:
-    char m_qname[Default::MAX_DOMAIN_NAME_SIZE];
-    unsigned int m_qtype : 16;
-    unsigned int m_qclass : 16;
-    Question(const char *data);
+    Question() {}
+    Question(unsigned char *buf, uint16_t offset);
+    uint16_t Size() { return m_size; }
+    std::vector<std::string> m_qname;
+    uint16_t m_qtype;
+    uint16_t m_qclass;
+    uint16_t m_size;
   };
+
   class ResourceRecord {
   public:
-    char m_name[Default::MAX_DOMAIN_NAME_SIZE];
-    unsigned int m_type : 16;
-    unsigned int m_class : 16;
-    unsigned int m_ttl : 32;
-    unsigned int m_rdLength : 16;
+    ResourceRecord() : m_rdata(nullptr) {}
+    ResourceRecord(unsigned char *buf, uint16_t offset);
+    uint16_t Size() { return m_size; }
+    std::vector<std::string> m_name;
+    uint16_t m_type;
+    uint16_t m_class;
+    uint32_t m_ttl;
+    uint16_t m_rdLength;
     char *m_rdata;
+    uint16_t m_size;
   };
-  Message(const char *data, int len);
+
+  Message() {}
+  Message(unsigned char *data, int len);
+  Header m_hdr;
+  std::vector<Question> m_questions;
+  std::vector<ResourceRecord> m_answers;
 };
 
-static const Message::Header *Parse(const unsigned char *data) {
-  return reinterpret_cast<const DNS::Message::Header *>(data);
-}
+// Stream operators for serializing and pretty-printing packet data
+// Header
 std::stringstream &operator<<(std::stringstream &ss,
                               const DNS::Message::Header &hdr);
 std::ostream &operator<<(std::ostream &os, const DNS::Message::Header &hdr);
+
+// Message
+std::stringstream &operator<<(std::stringstream &ss, const DNS::Message &msg);
+std::ostream &operator<<(std::ostream &os, const DNS::Message &msg);
+
+// Question
+std::stringstream &operator<<(std::stringstream &ss,
+                              const DNS::Message::Question &q);
+std::ostream &operator<<(std::ostream &os, const DNS::Message::Question &q);
+
+// ResourceRecord
+std::stringstream &operator<<(std::stringstream &ss,
+                              const DNS::Message::ResourceRecord &rr);
+std::ostream &operator<<(std::ostream &os,
+                         const DNS::Message::ResourceRecord &rr);
 } // namespace DNS

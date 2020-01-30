@@ -26,11 +26,11 @@ public:
   // Hint to stop the daemon
   // In the current implementation, the daemon will continue running until the
   // next request comes in
-  void stop();
+  void stop() { m_complete = true; }
   ~Daemon();
 
 private:
-  std::string m_spoofIP;
+  struct in_addr m_spoofIP;
   bool m_complete = false;
 }; // class Daemon
 } // namespace DNS

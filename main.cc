@@ -19,6 +19,8 @@ int main(int argc, char **argv) {
   DNS::Daemon daemon(address);
   auto serve = [&]() { daemon.run(); };
   auto serveThread = std::thread(serve);
+
+  // Wait for the daemon to finish
   serveThread.join();
   return 0;
 } // main()
