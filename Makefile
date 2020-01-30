@@ -9,7 +9,7 @@ dnsd:
 	$(COMPILER_CXX) $(CXX_FLAGS) main.cc dnsd.cc message.cc debug.cc -o dnsd $(LD_FLAGS)
 
 check:
-	$(COMPILER_CXX) -std=c++14 -O0 -g test.cc dnsd.cc message.cc -o test $(LD_FLAGS)
+	$(COMPILER_CXX) -std=c++14 -O0 -g test.cc dnsd.cc message.cc debug.cc -o test $(LD_FLAGS)
 	./test -s
 
 clean:

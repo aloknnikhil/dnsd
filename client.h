@@ -1,15 +1,17 @@
+#include "catch.hh"
 #include "dnsd.hh"
 #include "message.hh"
 #include <cstdlib>
 #include <ctime>
 #include <netinet/in.h>
+#include <ostream>
 #include <sstream>
 #include <stdexcept>
 #include <sys/socket.h>
 #include <vector>
 
 namespace DNS {
-DNS::Message *query(struct in_addr server,
+DNS::Message *query(struct sockaddr_in server,
                     std::vector<std::string> &domainLabels, uint16_t qtype,
                     uint16_t qclass) {
 
@@ -32,27 +34,29 @@ DNS::Message *query(struct in_addr server,
 
   // Dial UDP connection
   int sockFD = socket(AF_INET, SOCK_DGRAM, 0);
-  if (sockFD == -1) {
+  if (sockFD < 0) {
     std::stringstream message;
-    message << "What: " << std::strerror(errno) << " - Context: socket(UDP)";
+    message << "[CLIENT] What: " << std::strerror(errno)
+            << " - Context: socket(UDP)";
     throw std::runtime_error(message.str());
   }
 
-  int n = sendto(sockFD, queryBuf.str().c_str(), queryBuf.tellp(), MSG_WAITALL,
-                 reinterpret_cast<sockaddr *>(&server), sizeof(server));
-
+  socklen_t serverLen = sizeof(server);
+  int n = sendto(sockFD, queryBuf.str().c_str(), queryBuf.tellp(), 0,
+                 reinterpret_cast<sockaddr *>(&server), serverLen);
   if (n < queryBuf.tellp()) {
     std::stringstream message;
-    message << "What: " << std::strerror(errno) << " - Context: sendto()";
+    message << "[CLIENT] What: " << std::strerror(errno)
+            << " - Context: sendto()";
     throw std::runtime_error(message.str());
   }
   unsigned char buf[DNS::Default::BUFFER_SIZE];
-  socklen_t serverLen = sizeof(server);
   n = recvfrom(sockFD, buf, DNS::Default::BUFFER_SIZE, 0,
                reinterpret_cast<sockaddr *>(&server), &serverLen);
   if (n < 0) {
     std::stringstream message;
-    message << "What: " << std::strerror(errno) << " - Context: recvfrom()";
+    message << "[CLIENT] What: " << std::strerror(errno)
+            << " - Context: recvfrom()";
     throw std::runtime_error(message.str());
   }
 

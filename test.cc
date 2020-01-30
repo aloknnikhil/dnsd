@@ -83,32 +83,40 @@ void *daemonRunner(void *arg) {
   return nullptr;
 }
 
-TEST_CASE("DNS daemon responds to a simple lookup request") {
-  std::string address("9.9.9.9");
-  DNS::Daemon daemon(address);
+DNS::Message *queryDaemon(std::string address,
+                          std::vector<std::string> domainLabels) {
 
+  DNS::Daemon daemon(address);
   // Using pthreads over std::thread due to incompatibility with Catch2
   pthread_t thread_id;
   pthread_create(&thread_id, nullptr, daemonRunner, &daemon);
 
   // Send a DNS query
-  std::vector<std::string> domainLabels;
-  domainLabels.push_back("www");
-  domainLabels.push_back("meter");
-  domainLabels.push_back("com");
-
   sockaddr_in srvAddr{
       .sin_family = AF_INET,
       .sin_port = htons(DNS::Default::PORT),
       .sin_addr.s_addr = htonl(DNS::Default::ADDRESS),
   };
 
-  auto reply = DNS::query(srvAddr.sin_addr, domainLabels, 1, 1);
+  auto reply = DNS::query(srvAddr, domainLabels, 1, 1);
   daemon.stop();
   pthread_join(thread_id, nullptr);
+  return reply;
+}
 
-  std::stringstream debug;
-  debug << reply;
+TEST_CASE("DNS daemon responds to a simple lookup request") {
+  std::string address("9.9.9.9");
+  std::vector<std::string> domainLabels;
+  domainLabels.push_back("www");
+  domainLabels.push_back("meter");
+  domainLabels.push_back("com");
 
-  std::cout << debug.str() << std::endl;
+  auto reply = queryDaemon(address, domainLabels);
+  // Verify domain labels
+  CHECK(reply->m_questions.size() == 1);
+  CHECK(reply->m_answers.size() == 1);
+  CHECK(reply->m_questions[0].m_qname == domainLabels);
+  CHECK(reply->m_answers[0].m_name == domainLabels);
+
+  // Verify A-record matches our spoof argument
 }

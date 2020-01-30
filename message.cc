@@ -1,6 +1,7 @@
 #include "message.hh"
 #include <iostream>
 #include <ostream>
+#include <sstream>
 
 // Parses a DNS message from the buffer and the given length
 // Note: This daemon minimally parses only the question & answer sections and
@@ -21,7 +22,7 @@ DNS::Message::Message(unsigned char *data, int len) {
     Question q(data, offset);
     m_questions.push_back(q);
     offset += q.Size();
-    if (offset >= len && i <= (ntohs(m_hdr.m_qdcount) - 1)) {
+    if (offset >= len && i < (ntohs(m_hdr.m_qdcount) - 1)) {
       std::stringstream message;
       message << "[QUESTION] Incomplete message. Current offset: " << offset
               << "; Actual total: " << len;
@@ -29,12 +30,20 @@ DNS::Message::Message(unsigned char *data, int len) {
     }
   }
 
+  // Validate message length before proceeding
+  if (offset >= len && ntohs(m_hdr.m_ancount) > 0) {
+    std::stringstream message;
+    message << "[ANSWER] Incomplete message. Current offset: " << offset
+            << "; Actual total: " << len;
+    throw std::runtime_error(message.str());
+  }
+
   // Parse answers
   for (int i = 0; i < ntohs(m_hdr.m_ancount); i++) {
     ResourceRecord rr(data, offset);
     m_answers.push_back(rr);
     offset += rr.Size();
-    if (offset >= len && i <= (ntohs(m_hdr.m_ancount) - 1)) {
+    if (offset >= len && i < (ntohs(m_hdr.m_ancount) - 1)) {
       std::stringstream message;
       message << "[ANSWER] Incomplete message. Current offset: " << offset
               << "; Actual total: " << len;
@@ -63,10 +72,17 @@ DNS::Message::Question::Question(unsigned char *data, uint16_t offset) {
       char c = *buffer++;
       label.append(1, c);
     }
+
+    // Add a byte for the length octet for every label
+    m_size += 1;
+
     length = *buffer++;
     // Each label is stored as an element in a vector
     m_qname.push_back(label);
   }
+  // Add a byte for the final 0-length octet
+  m_size += 1;
+
   m_qtype = *reinterpret_cast<uint16_t *>(buffer);
   buffer += 2;
   m_size += 2;

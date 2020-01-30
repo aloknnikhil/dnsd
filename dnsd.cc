@@ -123,12 +123,12 @@ void DNS::Daemon::run(bool block) {
         reply.m_answers.push_back(rr);
       }
 
+      // Mark response code with no errors
+      reply.m_hdr.m_rcode = 0;
+
       // Serialize reply message from the stream
       std::ostringstream replybuffer;
       replybuffer << reply;
-
-      // Reply was serialized. Mark response code with no errors
-      reply.m_hdr.m_rcode = 0;
 
       // Send reply to client
       n = sendto(sockFD, replybuffer.str().c_str(), replybuffer.tellp(), 0,
