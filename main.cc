@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
 
   // Start Daemon (inits resolver and starts server)
   DNS::Daemon daemon(address);
-  auto serve = [&]() { daemon.run(); };
+  auto serve = [&]() { daemon.run(true); };
   auto serveThread = std::thread(serve);
 
   // Wait for the daemon to finish

@@ -21,7 +21,7 @@ public:
   Daemon(std::string spoof);
 
   // Blocking call to run the daemon and bind to port 53 (DNS Spec)
-  void run();
+  void run(bool block);
 
   // Hint to stop the daemon
   // In the current implementation, the daemon will continue running until the

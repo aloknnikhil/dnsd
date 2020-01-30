@@ -52,7 +52,7 @@ public:
 
   class Question {
   public:
-    Question() {}
+    Question() : m_qtype(0), m_qclass(0), m_size(0) {}
     Question(unsigned char *buf, uint16_t offset);
     uint16_t Size() { return m_size; }
     std::vector<std::string> m_qname;
@@ -63,7 +63,9 @@ public:
 
   class ResourceRecord {
   public:
-    ResourceRecord() : m_rdata(nullptr) {}
+    ResourceRecord()
+        : m_type(0), m_class(0), m_ttl(0), m_rdLength(0), m_rdata(nullptr),
+          m_size(0) {}
     ResourceRecord(unsigned char *buf, uint16_t offset);
     uint16_t Size() { return m_size; }
     std::vector<std::string> m_name;
@@ -75,7 +77,7 @@ public:
     uint16_t m_size;
   };
 
-  Message() {}
+  Message() : m_hdr({0}) {}
   Message(unsigned char *data, int len);
   Header m_hdr;
   std::vector<Question> m_questions;

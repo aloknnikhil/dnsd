@@ -38,7 +38,7 @@ DNS::Daemon::~Daemon() {
 
 // Start the daemon to receive DNS messages over UDP.
 // Blocking call.
-void DNS::Daemon::run() {
+void DNS::Daemon::run(bool block) {
   // Open a UDP socket
   auto sockFD = socket(AF_INET, SOCK_DGRAM, 0);
   if (sockFD == -1) {
@@ -68,12 +68,19 @@ void DNS::Daemon::run() {
   while (!m_complete) {
     sockaddr_in clientAddr{};
     socklen_t clientLen = sizeof(clientAddr);
-    int n = recvfrom(sockFD, buf, DNS::Default::BUFFER_SIZE, 0,
+    int flags = 0;
+    if (!block) {
+      flags = MSG_DONTWAIT;
+    }
+    int n = recvfrom(sockFD, buf, DNS::Default::BUFFER_SIZE, flags,
                      reinterpret_cast<sockaddr *>(&clientAddr), &clientLen);
     if (n < 0) {
+      if (!block && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+        continue;
+      }
       std::stringstream message;
-      message << "What: " << std::strerror(errno) << " - Context: listen()";
-      throw std::runtime_error(message.str());
+      message << "What: " << std::strerror(errno) << " - Context: recvfrom()";
+      std::cerr << message.str() << std::endl;
     }
 
     // Parse DNS query
@@ -126,6 +133,11 @@ void DNS::Daemon::run() {
       // Send reply to client
       n = sendto(sockFD, replybuffer.str().c_str(), replybuffer.tellp(), 0,
                  reinterpret_cast<sockaddr *>(&clientAddr), clientLen);
+      if (n < replybuffer.tellp()) {
+        std::stringstream message;
+        message << "What: " << std::strerror(errno) << " - Context: sendto()";
+        std::cerr << message.str() << std::endl;
+      }
     } catch (std::exception &e) {
       std::cerr << "Failed to parse DNS request: " << e.what()
                 << " Ignoring request" << std::endl;
