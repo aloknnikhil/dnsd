@@ -8,8 +8,7 @@ make
 
 ## Run
 ```sh
-./dnsd -e foo.com/192.168.1.33 bar.com/99.22.1.33
-```
+./dnsd -a 6.6.6.6
 
 ## Test
 ```sh
