@@ -9,6 +9,7 @@ make
 ## Run
 ```sh
 ./dnsd -a 6.6.6.6
+```
 
 ## Test
 ```sh
