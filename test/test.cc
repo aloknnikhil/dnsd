@@ -102,9 +102,9 @@ DNS::Message *queryDaemon(std::string address,
 
   // Send a DNS query
   sockaddr_in srvAddr{
-      .sin_family = AF_INET,
-      .sin_port = htons(DNS::Default::PORT),
-      .sin_addr.s_addr = htonl(DNS::Default::ADDRESS),
+      AF_INET,
+      htons(DNS::Default::PORT),
+      htonl(DNS::Default::ADDRESS),
   };
 
   auto reply = DNS::query(srvAddr, domainLabels, 1, 1);
@@ -258,9 +258,9 @@ TEST_CASE("Test for invalid message octet lengths") {
         "14159265358979323846264338327950288419999332323232136346553236");
 
     sockaddr_in srvAddr{
-        .sin_family = AF_INET,
-        .sin_port = htons(DNS::Default::PORT),
-        .sin_addr.s_addr = htonl(DNS::Default::ADDRESS),
+        AF_INET,
+        htons(DNS::Default::PORT),
+        htonl(DNS::Default::ADDRESS),
     };
 
     REQUIRE_THROWS(DNS::query(srvAddr, domainLabels, 1, 1));
@@ -271,9 +271,9 @@ TEST_CASE("Test for invalid message octet lengths") {
     domainLabels.push_back("");
 
     sockaddr_in srvAddr{
-        .sin_family = AF_INET,
-        .sin_port = htons(DNS::Default::PORT),
-        .sin_addr.s_addr = htonl(DNS::Default::ADDRESS),
+        AF_INET,
+        htons(DNS::Default::PORT),
+        htonl(DNS::Default::ADDRESS),
     };
 
     REQUIRE_THROWS(DNS::query(srvAddr, domainLabels, 1, 1));

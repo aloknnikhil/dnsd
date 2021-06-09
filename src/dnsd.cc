@@ -49,10 +49,10 @@ void DNS::Daemon::run(bool block) {
   }
 
   // Bind to UDP port (default: 53; address: 0.0.0.0)
-  const sockaddr_in srvAddr{
-      .sin_family = AF_INET,
-      .sin_port = htons(DNS::Default::PORT),
-      .sin_addr.s_addr = htonl(DNS::Default::ADDRESS),
+  const sockaddr_in srvAddr {
+      AF_INET,
+      htons(DNS::Default::PORT),
+      htonl(DNS::Default::ADDRESS)
   };
   if (bind(sockFD, reinterpret_cast<const sockaddr *>(&srvAddr),
            sizeof(srvAddr)) < 0) {
